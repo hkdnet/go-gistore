@@ -2,10 +2,19 @@ package gistore
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
+)
+
+const (
+	nonPointerError                = "SelectAll: second argument must be a pointer"
+	nonPointerOfSliceError         = "SelectAll: second arugment must be a pointer of slice"
+	nonPointerOfSliceOfStructError = "SelectAll: output must be slice of struct, but %v"
+
+	unknownError = "Something wrong occurred"
 )
 
 type Client struct {
@@ -71,20 +80,21 @@ func (c *Client) SelectAll(name string, output interface{}) (err error) {
 	}
 	rv := reflect.ValueOf(output)
 	if rv.Kind() != reflect.Ptr {
-		return fmt.Errorf("SelectAll: second argument must be a pointer")
+		return errors.New(nonPointerError)
 	}
 	for rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
 	}
 	if rv.Kind() == reflect.Invalid {
-		return fmt.Errorf("SelectAll: nil pointer dereference")
+		// unexpected
+		return fmt.Errorf(unknownError)
 	}
 	if rv.Kind() != reflect.Slice {
-		return fmt.Errorf("SelectAll: ")
+		return fmt.Errorf(nonPointerOfSliceError)
 	}
 	t := rv.Type().Elem()
 	if t.Kind() != reflect.Struct {
-		return fmt.Errorf("SelectAll: output must be slice of struct, but %v", rv.Type())
+		return fmt.Errorf(nonPointerOfSliceOfStructError, rv.Type())
 	}
 	f, ok := gist.Files[name]
 	if !ok {
